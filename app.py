@@ -133,11 +133,21 @@ for col in feature_names:
     if col not in input_data:
         label = label_map.get(col, col)
         default_val = demo_data.get(col, 0) if use_demo else 0
-        input_data[col] = st.number_input(
-            label,
-            value=float(default_val),
-            format="%,.0f"
-        )
+
+        # Jika variabel nominal uang
+        if col.startswith("BILL_AMT") or col.startswith("PAY_AMT") or col == "LIMIT_BAL":
+            input_data[col] = st.number_input(
+                label,
+                value=float(default_val),
+                format="%,.0f"
+            )
+        else:
+            # Variabel status keterlambatan
+            input_data[col] = st.number_input(
+                label,
+                value=int(default_val),
+                step=1
+            )
 
 st.caption("Keterlambatan: 0 = tepat waktu, 1 = telat 1 bulan, dst.")
 
@@ -165,3 +175,4 @@ if st.button("Prediksi Risiko"):
         st.error("⚠️ Risiko Tinggi Gagal Bayar")
     else:
         st.success("✅ Risiko Rendah Gagal Bayar")
+
