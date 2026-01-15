@@ -149,9 +149,10 @@ with col_input:
         else:
             default_val = 0
             input_data[col] = st.number_input(
-                label_map.get(col, col),
-                value=float(default_val)
-            )
+    label_map.get(col, col),
+    value=float(default_val),
+    key=f"input_{col}"
+)
 
 # ======================
 # PREDICTION
@@ -223,4 +224,5 @@ st.caption(
     "Catatan: Hasil prediksi bersifat pendukung keputusan "
     "dan tidak menggantikan analisis kredit oleh pihak bank."
 )
+
 
