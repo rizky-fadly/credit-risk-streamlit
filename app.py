@@ -1,178 +1,225 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import joblib
-import shap
 import matplotlib.pyplot as plt
 
-# =========================
-# KONFIGURASI HALAMAN
-# =========================
-st.set_page_config(page_title="Prediksi Risiko Kredit", layout="centered")
+# ======================
+# OPTIONAL SHAP (AMAN)
+# ======================
+try:
+    import shap
+    SHAP_AVAILABLE = True
+except:
+    SHAP_AVAILABLE = False
 
-st.title("Prediksi Risiko Gagal Bayar Kartu Kredit")
-st.write(
-    "Aplikasi ini memprediksi risiko gagal bayar kartu kredit "
-    "menggunakan model **XGBoost** dan menjelaskan hasilnya dengan **SHAP**."
+# ======================
+# PAGE CONFIG
+# ======================
+st.set_page_config(
+    page_title="Prediksi Risiko Gagal Bayar",
+    layout="wide"
 )
 
-# =========================
-# LOAD MODEL & FITUR
-# =========================
-model = joblib.load("xgb_credit_default_model.pkl")
+st.title("📊 Prediksi Risiko Gagal Bayar Kredit")
+st.caption(
+    "Aplikasi ini memprediksi kemungkinan gagal bayar nasabah "
+    "menggunakan model XGBoost dan Explainable AI (SHAP)."
+)
+
+# ======================
+# LOAD MODEL & FEATURE
+# ======================
+model = joblib.load("model.pkl")
 feature_names = joblib.load("feature_names.pkl")
-explainer = shap.TreeExplainer(model)
 
-# =========================
-# DATA CONTOH
-# =========================
-contoh_rendah = {
-    "LIMIT_BAL": 50000000, "AGE": 30, "SEX": 1, "EDUCATION": 4, "MARRIAGE": 2,
-    "PAY_0": 0, "PAY_2": 0, "PAY_3": 0, "PAY_4": 0, "PAY_5": 0, "PAY_6": 0,
-    "BILL_AMT1": 8000000, "BILL_AMT2": 7500000, "BILL_AMT3": 7000000,
-    "BILL_AMT4": 6800000, "BILL_AMT5": 6500000, "BILL_AMT6": 6000000,
-    "PAY_AMT1": 3000000, "PAY_AMT2": 3000000, "PAY_AMT3": 3000000,
-    "PAY_AMT4": 3000000, "PAY_AMT5": 3000000, "PAY_AMT6": 3000000,
+# ======================
+# MAPPING AWAM
+# ======================
+label_map = {
+    "LIMIT_BAL": "Limit Kredit",
+    "SEX": "Jenis Kelamin",
+    "EDUCATION": "Pendidikan",
+    "MARRIAGE": "Status Pernikahan",
+    "AGE": "Usia",
+    "PAY_0": "Status Pembayaran Terakhir",
+    "PAY_2": "Pembayaran 2 Bulan Lalu",
+    "PAY_3": "Pembayaran 3 Bulan Lalu",
+    "PAY_4": "Pembayaran 4 Bulan Lalu",
+    "PAY_5": "Pembayaran 5 Bulan Lalu",
+    "PAY_6": "Pembayaran 6 Bulan Lalu",
+    "BILL_AMT1": "Tagihan Bulan Terakhir",
+    "BILL_AMT2": "Tagihan 2 Bulan Lalu",
+    "BILL_AMT3": "Tagihan 3 Bulan Lalu",
+    "BILL_AMT4": "Tagihan 4 Bulan Lalu",
+    "BILL_AMT5": "Tagihan 5 Bulan Lalu",
+    "BILL_AMT6": "Tagihan 6 Bulan Lalu",
+    "PAY_AMT1": "Pembayaran Bulan Terakhir",
+    "PAY_AMT2": "Pembayaran 2 Bulan Lalu",
+    "PAY_AMT3": "Pembayaran 3 Bulan Lalu",
+    "PAY_AMT4": "Pembayaran 4 Bulan Lalu",
+    "PAY_AMT5": "Pembayaran 5 Bulan Lalu",
+    "PAY_AMT6": "Pembayaran 6 Bulan Lalu",
 }
 
-contoh_tinggi = {
-    "LIMIT_BAL": 20000000, "AGE": 25, "SEX": 1, "EDUCATION": 2, "MARRIAGE": 2,
-    "PAY_0": 2, "PAY_2": 2, "PAY_3": 1, "PAY_4": 3, "PAY_5": 2, "PAY_6": 1,
-    "BILL_AMT1": 15000000, "BILL_AMT2": 14000000, "BILL_AMT3": 13500000,
-    "BILL_AMT4": 13000000, "BILL_AMT5": 12500000, "BILL_AMT6": 12000000,
-    "PAY_AMT1": 500000, "PAY_AMT2": 500000, "PAY_AMT3": 500000,
-    "PAY_AMT4": 500000, "PAY_AMT5": 500000, "PAY_AMT6": 500000,
-}
+# ======================
+# DEFAULT VALUES
+# ======================
+if "demo" not in st.session_state:
+    st.session_state.demo = "normal"
 
-if "contoh_data" not in st.session_state:
-    st.session_state.contoh_data = None
+# ======================
+# LAYOUT
+# ======================
+col_input, col_output = st.columns([1, 1.2])
 
-c1, c2 = st.columns(2)
-with c1:
-    if st.button("🟢 Contoh Risiko Rendah"):
-        st.session_state.contoh_data = contoh_rendah
-with c2:
-    if st.button("🔴 Contoh Risiko Tinggi"):
-        st.session_state.contoh_data = contoh_tinggi
+# ======================
+# INPUT SECTION
+# ======================
+with col_input:
+    st.subheader("📋 Data Nasabah")
 
-use_data = st.session_state.contoh_data
-input_data = {}
+    # -------- DEMO BUTTONS --------
+    st.markdown("### 🎯 Contoh Cepat")
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("🟢 Contoh Risiko Rendah"):
+            st.session_state.demo = "low"
+    with c2:
+        if st.button("🔴 Contoh Risiko Tinggi"):
+            st.session_state.demo = "high"
 
-# =========================
-# DATA NASABAH
-# =========================
-st.header("📋 Data Nasabah")
+    # -------- IDENTITAS --------
+    with st.expander("Identitas Dasar", expanded=True):
+        sex = st.selectbox("Jenis Kelamin", ["Laki-laki", "Perempuan"])
+        education = st.selectbox(
+            "Pendidikan Terakhir",
+            ["SMA", "Diploma", "Sarjana", "Pascasarjana"]
+        )
+        marriage = st.selectbox(
+            "Status Pernikahan",
+            ["Belum Menikah", "Menikah", "Lainnya"]
+        )
+        age = st.number_input("Usia (tahun)", 18, 100, 30)
 
-sex_map = {"Laki-laki": 1, "Perempuan": 2}
-edu_map = {"SMA": 2, "Diploma": 3, "Sarjana": 4, "Pascasarjana": 5, "Lainnya": 6}
-marriage_map = {"Menikah": 1, "Belum Menikah": 2, "Lainnya": 3}
+    # -------- LIMIT --------
+    with st.expander("Limit Kredit", expanded=True):
+        if st.session_state.demo == "low":
+            limit_bal = 100_000_000
+        elif st.session_state.demo == "high":
+            limit_bal = 15_000_000
+        else:
+            limit_bal = 50_000_000
 
-input_data["SEX"] = sex_map[st.selectbox("Jenis Kelamin", sex_map)]
-input_data["EDUCATION"] = edu_map[st.selectbox("Pendidikan Terakhir", edu_map)]
-input_data["MARRIAGE"] = marriage_map[st.selectbox("Status Pernikahan", marriage_map)]
+        limit_bal = st.number_input("Limit Kredit", value=int(limit_bal))
+        st.caption(f"💰 Pratinjau: Rp {limit_bal:,.0f}")
 
-input_data["AGE"] = st.number_input(
-    "Usia Nasabah (tahun)", 18, 100,
-    value=use_data["AGE"] if use_data else 30
-)
+    # -------- RIWAYAT PEMBAYARAN --------
+    with st.expander("Riwayat Pembayaran", expanded=True):
+        pay_status = st.selectbox(
+            "Status Pembayaran Terakhir",
+            ["Tepat Waktu", "Terlambat 1 Bulan", "Terlambat >1 Bulan"]
+        )
 
-limit_bal = st.number_input(
-    "Limit Kartu Kredit (Rp)", min_value=0.0,
-    value=float(use_data["LIMIT_BAL"]) if use_data else 10000000.0
-)
-st.caption(f"≈ Rp {limit_bal:,.0f}")
-input_data["LIMIT_BAL"] = limit_bal
+    # -------- NOMINAL LAIN --------
+    st.markdown("### Detail Tagihan & Pembayaran")
+    input_data = {}
 
-# =========================
-# RIWAYAT PEMBAYARAN
-# =========================
-st.subheader("📆 Riwayat Pembayaran Kredit")
+    for col in feature_names:
+        if col == "LIMIT_BAL":
+            input_data[col] = limit_bal
+        elif col == "SEX":
+            input_data[col] = 1 if sex == "Laki-laki" else 2
+        elif col == "EDUCATION":
+            input_data[col] = {
+                "SMA": 1, "Diploma": 2, "Sarjana": 3, "Pascasarjana": 4
+            }[education]
+        elif col == "MARRIAGE":
+            input_data[col] = {
+                "Belum Menikah": 1, "Menikah": 2, "Lainnya": 3
+            }[marriage]
+        elif col == "AGE":
+            input_data[col] = age
+        elif col == "PAY_0":
+            input_data[col] = {
+                "Tepat Waktu": 0,
+                "Terlambat 1 Bulan": 1,
+                "Terlambat >1 Bulan": 2
+            }[pay_status]
+        else:
+            default_val = 0
+            input_data[col] = st.number_input(
+                label_map.get(col, col),
+                value=float(default_val)
+            )
 
-status_bayar = {
-    "Tepat waktu": 0,
-    "Terlambat 1 bulan": 1,
-    "Terlambat 2 bulan": 2,
-    "Terlambat lebih dari 3 bulan": 3
-}
+# ======================
+# PREDICTION
+# ======================
+df_input = pd.DataFrame([input_data])[feature_names]
+prob = model.predict_proba(df_input)[0][1]
 
-pay_labels = {
-    "PAY_0": "Pembayaran Bulan Ini",
-    "PAY_2": "2 Bulan Lalu",
-    "PAY_3": "3 Bulan Lalu",
-    "PAY_4": "4 Bulan Lalu",
-    "PAY_5": "5 Bulan Lalu",
-    "PAY_6": "6 Bulan Lalu",
-}
+# ======================
+# OUTPUT SECTION
+# ======================
+with col_output:
+    st.subheader("🔍 Hasil Analisis Risiko")
 
-for col, label in pay_labels.items():
-    default = use_data[col] if use_data else 0
-    input_data[col] = status_bayar[
-        st.selectbox(label, status_bayar, index=min(default, 3))
-    ]
-
-# =========================
-# TAGIHAN & PEMBAYARAN
-# =========================
-st.subheader("💳 Tagihan & Pembayaran (Rp)")
-
-for i in range(1, 7):
-    bill = st.number_input(
-        f"Tagihan Bulan ke-{i}", min_value=0.0,
-        value=float(use_data[f"BILL_AMT{i}"]) if use_data else 0.0
+    st.metric(
+        "Probabilitas Gagal Bayar",
+        f"{prob*100:.2f} %"
     )
-    st.caption(f"≈ Rp {bill:,.0f}")
-    input_data[f"BILL_AMT{i}"] = bill
-
-for i in range(1, 7):
-    pay = st.number_input(
-        f"Pembayaran Bulan ke-{i}", min_value=0.0,
-        value=float(use_data[f"PAY_AMT{i}"]) if use_data else 0.0
-    )
-    st.caption(f"≈ Rp {pay:,.0f}")
-    input_data[f"PAY_AMT{i}"] = pay
-
-# =========================
-# HASIL PREDIKSI
-# =========================
-st.header("📊 Hasil Prediksi")
-
-if st.button("🔍 Prediksi Risiko"):
-    df = pd.DataFrame([input_data])[feature_names]
-    prob = model.predict_proba(df)[0][1]
-
-    st.metric("Probabilitas Gagal Bayar", f"{prob*100:.2f}%")
 
     if prob >= 0.5:
-        st.error("⚠️ Risiko Tinggi Gagal Bayar")
+        st.error("🔴 Risiko Tinggi Gagal Bayar")
     else:
-        st.success("✅ Risiko Rendah Gagal Bayar")
+        st.success("🟢 Risiko Rendah Gagal Bayar")
 
-    # =========================
+    # ======================
     # SHAP EXPLANATION
-    # =========================
-    st.subheader("🔎 Penjelasan Prediksi (SHAP)")
+    # ======================
+    st.subheader("📊 Penjelasan Model (Explainable AI)")
 
-    shap_values = explainer.shap_values(df)
-    shap_vals = shap_values[1][0] if isinstance(shap_values, list) else shap_values[0]
+    if SHAP_AVAILABLE:
+        explainer = shap.TreeExplainer(model)
+        shap_values = explainer.shap_values(df_input)
 
-    shap_df = pd.DataFrame({
-        "Fitur": feature_names,
-        "Pengaruh": shap_vals
-    })
+        # binary class → ambil kelas 1
+        shap_single = shap_values[1][0]
 
-    shap_df["|Pengaruh|"] = shap_df["Pengaruh"].abs()
-    shap_df = shap_df.sort_values("|Pengaruh|", ascending=False).head(10)
+        shap_df = pd.DataFrame({
+            "Fitur": feature_names,
+            "SHAP": shap_single
+        })
 
-    fig, ax = plt.subplots()
-    ax.barh(shap_df["Fitur"], shap_df["Pengaruh"])
-    ax.axvline(0)
-    ax.set_title("10 Fitur Paling Berpengaruh")
-    ax.set_xlabel("Pengaruh terhadap Risiko Gagal Bayar")
-    plt.gca().invert_yaxis()
+        shap_df["Fitur"] = shap_df["Fitur"].map(label_map).fillna(shap_df["Fitur"])
 
-    st.pyplot(fig)
+        risk_up = shap_df[shap_df["SHAP"] > 0].sort_values("SHAP", ascending=False).head(5)
+        risk_down = shap_df[shap_df["SHAP"] < 0].sort_values("SHAP").head(5)
 
-    top_feature = shap_df.iloc[0]["Fitur"]
-    st.info(
-        f"Fitur paling berpengaruh pada prediksi ini adalah **{top_feature}**. "
-        "Nilai positif meningkatkan risiko gagal bayar, sedangkan nilai negatif menurunkannya."
-    )
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+
+        axes[0].barh(risk_up["Fitur"], risk_up["SHAP"])
+        axes[0].set_title("🔴 Faktor Peningkat Risiko")
+        axes[0].invert_yaxis()
+
+        axes[1].barh(risk_down["Fitur"], risk_down["SHAP"])
+        axes[1].set_title("🟢 Faktor Penurun Risiko")
+        axes[1].invert_yaxis()
+
+        st.pyplot(fig)
+
+        # -------- AUTO EXPLANATION --------
+        st.subheader("🧠 Penjelasan Otomatis")
+        for _, r in risk_up.iterrows():
+            st.markdown(f"- **{r['Fitur']}** meningkatkan risiko gagal bayar.")
+        for _, r in risk_down.iterrows():
+            st.markdown(f"- **{r['Fitur']}** membantu menurunkan risiko gagal bayar.")
+
+    else:
+        st.warning("SHAP tidak tersedia di environment deployment.")
+
+st.caption(
+    "Catatan: Hasil prediksi bersifat pendukung keputusan "
+    "dan tidak menggantikan analisis kredit oleh pihak bank."
+)
