@@ -49,6 +49,8 @@ st.divider()
 st.subheader("Riwayat Pembayaran & Tagihan")
 
 label_map = {
+    "LIMIT_BAL": "Limit Kredit Kartu (Rp)",
+
     "PAY_0": "Keterlambatan pembayaran bulan terakhir",
     "PAY_2": "Keterlambatan 2 bulan lalu",
     "PAY_3": "Keterlambatan 3 bulan lalu",
@@ -70,6 +72,7 @@ label_map = {
     "PAY_AMT5": "Pembayaran 5 bulan lalu (Rp)",
     "PAY_AMT6": "Pembayaran 6 bulan lalu (Rp)",
 }
+
 
 for col in feature_names:
     if col not in input_data:
@@ -95,3 +98,4 @@ if st.button("Prediksi Risiko"):
         st.error("⚠️ Risiko Tinggi Gagal Bayar")
     else:
         st.success("✅ Risiko Rendah Gagal Bayar")
+
