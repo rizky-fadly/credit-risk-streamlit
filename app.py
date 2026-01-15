@@ -190,3 +190,47 @@ if st.button("🔍 Prediksi Risiko"):
         st.error("⚠️ Risiko Tinggi Gagal Bayar")
     else:
         st.success("✅ Risiko Rendah Gagal Bayar")
+        
+# =========================
+# SHAP EXPLANATION
+# =========================
+st.subheader("🔎 Penjelasan Prediksi (SHAP)")
+
+# Hitung SHAP value
+shap_values = explainer.shap_values(df)
+
+# Untuk binary classification (ambil kelas default = 1)
+if isinstance(shap_values, list):
+    shap_vals = shap_values[1][0]
+else:
+    shap_vals = shap_values[0]
+
+# Buat DataFrame SHAP
+shap_df = pd.DataFrame({
+    "Fitur": feature_names,
+    "Pengaruh": shap_vals,
+    "Nilai Input": df.iloc[0].values
+})
+
+# Ambil TOP 10 fitur paling berpengaruh
+shap_df["|Pengaruh|"] = shap_df["Pengaruh"].abs()
+shap_df = shap_df.sort_values("|Pengaruh|", ascending=False).head(10)
+
+# Plot BAR (AMAN STREAMLIT)
+fig, ax = plt.subplots()
+ax.barh(
+    shap_df["Fitur"],
+    shap_df["Pengaruh"]
+)
+ax.axvline(0)
+ax.set_title("Fitur Paling Berpengaruh terhadap Prediksi")
+ax.set_xlabel("Pengaruh terhadap Risiko Gagal Bayar")
+
+st.pyplot(fig)
+
+top_feature = shap_df.iloc[0]["Fitur"]
+
+st.info(
+    f"Fitur yang paling memengaruhi hasil prediksi adalah **{top_feature}**. "
+    "Nilai fitur ini berkontribusi signifikan dalam menentukan risiko gagal bayar."
+)
