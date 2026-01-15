@@ -28,7 +28,7 @@ st.caption(
 )
 
 # ======================
-# LOAD MODEL
+# LOAD MODEL & FEATURE
 # ======================
 model = joblib.load("xgb_credit_default_model.pkl")
 feature_names = joblib.load("feature_names.pkl")
@@ -67,6 +67,31 @@ label_map = {
 # ======================
 if "demo" not in st.session_state:
     st.session_state.demo = "normal"
+
+# ======================
+# DEMO PRESET (FIX UTAMA)
+# ======================
+demo_low = {
+    "PAY_0": 0,
+    "PAY_2": 0, "PAY_3": 0, "PAY_4": 0, "PAY_5": 0, "PAY_6": 0,
+    "BILL_AMT1": 3_000_000, "BILL_AMT2": 3_500_000,
+    "BILL_AMT3": 4_000_000, "BILL_AMT4": 4_500_000,
+    "BILL_AMT5": 5_000_000, "BILL_AMT6": 5_500_000,
+    "PAY_AMT1": 3_000_000, "PAY_AMT2": 3_500_000,
+    "PAY_AMT3": 4_000_000, "PAY_AMT4": 4_500_000,
+    "PAY_AMT5": 5_000_000, "PAY_AMT6": 5_500_000,
+}
+
+demo_high = {
+    "PAY_0": 2,
+    "PAY_2": 2, "PAY_3": 2, "PAY_4": 2, "PAY_5": 2, "PAY_6": 2,
+    "BILL_AMT1": 20_000_000, "BILL_AMT2": 18_000_000,
+    "BILL_AMT3": 17_000_000, "BILL_AMT4": 16_000_000,
+    "BILL_AMT5": 15_000_000, "BILL_AMT6": 14_000_000,
+    "PAY_AMT1": 500_000, "PAY_AMT2": 500_000,
+    "PAY_AMT3": 500_000, "PAY_AMT4": 500_000,
+    "PAY_AMT5": 500_000, "PAY_AMT6": 500_000,
+}
 
 # ======================
 # LAYOUT
@@ -125,6 +150,13 @@ with col_input:
 
     input_data = {}
 
+    if st.session_state.demo == "low":
+        demo_values = demo_low
+    elif st.session_state.demo == "high":
+        demo_values = demo_high
+    else:
+        demo_values = {}
+
     for col in feature_names:
         if col == "LIMIT_BAL":
             input_data[col] = limit_bal
@@ -147,9 +179,10 @@ with col_input:
                 "Terlambat >1 Bulan": 2
             }[pay_status]
         else:
+            default_val = demo_values.get(col, 0)
             input_data[col] = st.number_input(
                 label_map.get(col, col),
-                value=0.0,
+                value=float(default_val),
                 key=f"input_{col}"
             )
 
@@ -175,16 +208,12 @@ with col_output:
     else:
         st.success("🟢 Risiko Rendah Gagal Bayar")
 
-    # ======================
-    # SHAP
-    # ======================
     st.subheader("📊 Penjelasan Model (Explainable AI)")
 
     if SHAP_AVAILABLE:
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(df_input)
 
-        # FIX SEMUA VERSI SHAP
         if isinstance(shap_values, list):
             shap_single = shap_values[1][0]
         else:
@@ -225,4 +254,3 @@ st.caption(
     "Catatan: Hasil prediksi bersifat pendukung keputusan "
     "dan tidak menggantikan analisis kredit oleh pihak bank."
 )
-
