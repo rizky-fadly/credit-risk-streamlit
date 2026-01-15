@@ -129,13 +129,29 @@ with col1:
 with col2:
     st.subheader("Riwayat Keterlambatan Pembayaran")
 
-    for p in ["PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6"]:
-        input_data[p] = st.selectbox(
-            p,
-            options=[-1, 0, 1, 2, 3],
-            index=2 if st.session_state.input_data[p] >= 1 else 1,
-            help="0 = Lancar, 1–3 = Terlambat"
-        )
+    pay_labels = {
+    "PAY_0": "Keterlambatan Pembayaran Bulan Terakhir",
+    "PAY_2": "Keterlambatan 2 Bulan Lalu",
+    "PAY_3": "Keterlambatan 3 Bulan Lalu",
+    "PAY_4": "Keterlambatan 4 Bulan Lalu",
+    "PAY_5": "Keterlambatan 5 Bulan Lalu",
+    "PAY_6": "Keterlambatan 6 Bulan Lalu",
+}
+
+for p, label in pay_labels.items():
+    input_data[p] = st.selectbox(
+        label,
+        options=[-1, 0, 1, 2, 3],
+        format_func=lambda x: {
+            -1: "Tidak ada tagihan",
+            0: "Lancar",
+            1: "Terlambat 1 bulan",
+            2: "Terlambat 2 bulan",
+            3: "Terlambat ≥3 bulan"
+        }[x],
+        index=2 if st.session_state.input_data[p] >= 1 else 1,
+        key=f"pay_{p}"
+    )
 
 # ======================
 # TAGIHAN & PEMBAYARAN
@@ -212,3 +228,4 @@ if st.button("🔍 Prediksi Risiko"):
             st.markdown(f"- **{f}** meningkatkan risiko gagal bayar.")
         for f in turun["Fitur"]:
             st.markdown(f"- **{f}** menurunkan risiko gagal bayar.")
+
