@@ -23,10 +23,10 @@ model = joblib.load("xgb_credit_default_model.pkl")
 feature_names = joblib.load("feature_names.pkl")
 
 # =========================
-# DEMO DATA (1 KLIK)
+# DEMO DATA
 # =========================
 demo_data = {
-    "LIMIT_BAL": 50_000_000,
+    "LIMIT_BAL": 50000000,
     "SEX": 1,
     "EDUCATION": 4,
     "MARRIAGE": 2,
@@ -39,19 +39,19 @@ demo_data = {
     "PAY_5": 0,
     "PAY_6": 0,
 
-    "BILL_AMT1": 8_000_000,
-    "BILL_AMT2": 7_500_000,
-    "BILL_AMT3": 7_000_000,
-    "BILL_AMT4": 6_800_000,
-    "BILL_AMT5": 6_500_000,
-    "BILL_AMT6": 6_000_000,
+    "BILL_AMT1": 8000000,
+    "BILL_AMT2": 7500000,
+    "BILL_AMT3": 7000000,
+    "BILL_AMT4": 6800000,
+    "BILL_AMT5": 6500000,
+    "BILL_AMT6": 6000000,
 
-    "PAY_AMT1": 3_000_000,
-    "PAY_AMT2": 3_000_000,
-    "PAY_AMT3": 3_000_000,
-    "PAY_AMT4": 3_000_000,
-    "PAY_AMT5": 3_000_000,
-    "PAY_AMT6": 3_000_000,
+    "PAY_AMT1": 3000000,
+    "PAY_AMT2": 3000000,
+    "PAY_AMT3": 3000000,
+    "PAY_AMT4": 3000000,
+    "PAY_AMT5": 3000000,
+    "PAY_AMT6": 3000000,
 }
 
 if "demo" not in st.session_state:
@@ -69,7 +69,7 @@ st.header("📋 Data Nasabah")
 
 input_data = {}
 
-# ---- INPUT KATEGORI DASAR ----
+# ---- INPUT KATEGORIK ----
 sex_map = {"Laki-laki": 1, "Perempuan": 2}
 edu_map = {
     "Sekolah Dasar": 1,
@@ -100,38 +100,12 @@ input_data["AGE"] = int(age_val) if age_val.isdigit() else 30
 
 st.divider()
 
-# ---- LABEL RAMAH ----
-label_map = {
-    "LIMIT_BAL": "Limit Kredit Kartu (Rp)",
-
-    "PAY_0": "Keterlambatan pembayaran bulan terakhir",
-    "PAY_2": "Keterlambatan 2 bulan lalu",
-    "PAY_3": "Keterlambatan 3 bulan lalu",
-    "PAY_4": "Keterlambatan 4 bulan lalu",
-    "PAY_5": "Keterlambatan 5 bulan lalu",
-    "PAY_6": "Keterlambatan 6 bulan lalu",
-
-    "BILL_AMT1": "Tagihan bulan terakhir (Rp)",
-    "BILL_AMT2": "Tagihan 2 bulan lalu (Rp)",
-    "BILL_AMT3": "Tagihan 3 bulan lalu (Rp)",
-    "BILL_AMT4": "Tagihan 4 bulan lalu (Rp)",
-    "BILL_AMT5": "Tagihan 5 bulan lalu (Rp)",
-    "BILL_AMT6": "Tagihan 6 bulan lalu (Rp)",
-
-    "PAY_AMT1": "Pembayaran bulan terakhir (Rp)",
-    "PAY_AMT2": "Pembayaran 2 bulan lalu (Rp)",
-    "PAY_AMT3": "Pembayaran 3 bulan lalu (Rp)",
-    "PAY_AMT4": "Pembayaran 4 bulan lalu (Rp)",
-    "PAY_AMT5": "Pembayaran 5 bulan lalu (Rp)",
-    "PAY_AMT6": "Pembayaran 6 bulan lalu (Rp)",
-}
-
 # =========================
 # RIWAYAT KREDIT
 # =========================
 st.subheader("Riwayat Kredit")
 
-# ---- PAY (dropdown, paling aman) ----
+# ---- STATUS KETERLAMBATAN ----
 pay_options = {
     "Tepat waktu": 0,
     "Terlambat 1 bulan": 1,
@@ -141,31 +115,24 @@ pay_options = {
 
 for col in ["PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6"]:
     default_val = demo_data.get(col, 0) if use_demo else 0
-    label = label_map[col]
-
     selected = st.selectbox(
-        label,
+        col,
         list(pay_options.keys()),
-        index=list(pay_options.values()).index(min(default_val, 3))
+        index=min(default_val, 3)
     )
     input_data[col] = pay_options[selected]
 
 st.divider()
 
-# ---- NOMINAL UANG ----
+# ---- NOMINAL (TANPA FORMAT, AMAN CLOUD) ----
 for col in feature_names:
     if col.startswith("BILL_AMT") or col.startswith("PAY_AMT") or col == "LIMIT_BAL":
-        label = label_map.get(col, col)
         default_val = demo_data.get(col, 0) if use_demo else 0
-
         input_data[col] = st.number_input(
-            label,
+            col,
             value=float(default_val),
-            min_value=0.0,
-            format="%,.0f"
+            min_value=0.0
         )
-
-st.caption("Keterlambatan: 0 = tepat waktu, 1 = telat 1 bulan, dst.")
 
 # =========================
 # BAGIAN 2: HASIL
@@ -178,14 +145,9 @@ if st.button("Prediksi Risiko"):
 
     prob = model.predict_proba(df_input)[0][1]
 
-    st.metric(
-        "Probabilitas Gagal Bayar",
-        f"{prob * 100:.2f} %"
-    )
+    st.metric("Probabilitas Gagal Bayar", f"{prob * 100:.2f} %")
 
-    st.write(
-        f"**Limit Kredit:** Rp {input_data['LIMIT_BAL']:,.0f}"
-    )
+    st.write(f"**Limit Kredit:** Rp {input_data['LIMIT_BAL']:,.0f}")
 
     if prob >= 0.5:
         st.error("⚠️ Risiko Tinggi Gagal Bayar")
