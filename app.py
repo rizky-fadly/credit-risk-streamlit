@@ -228,9 +228,3 @@ ax.set_xlabel("Pengaruh terhadap Risiko Gagal Bayar")
 
 st.pyplot(fig)
 
-top_feature = shap_df.iloc[0]["Fitur"]
-
-st.info(
-    f"Fitur yang paling memengaruhi hasil prediksi adalah **{top_feature}**. "
-    "Nilai fitur ini berkontribusi signifikan dalam menentukan risiko gagal bayar."
-)
