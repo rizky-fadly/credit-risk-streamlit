@@ -185,8 +185,14 @@ with col_output:
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(df_input)
 
-        # binary class → ambil kelas 1
-        shap_single = shap_values[1][0]
+        explainer = shap.TreeExplainer(model)
+shap_values = explainer.shap_values(df_input)
+
+# HANDLE BINARY / SINGLE OUTPUT
+if isinstance(shap_values, list):
+    shap_single = shap_values[1][0]   # kelas gagal bayar
+else:
+    shap_single = shap_values[0]
 
         shap_df = pd.DataFrame({
             "Fitur": feature_names,
@@ -224,5 +230,6 @@ st.caption(
     "Catatan: Hasil prediksi bersifat pendukung keputusan "
     "dan tidak menggantikan analisis kredit oleh pihak bank."
 )
+
 
 
