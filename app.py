@@ -5,7 +5,9 @@ import joblib
 st.set_page_config(page_title="Credit Card Default Prediction")
 
 st.title("Credit Card Default Prediction")
+st.write("Aplikasi prediksi risiko gagal bayar kartu kredit menggunakan XGBoost")
 
+# load model & feature list
 model = joblib.load("xgb_credit_default_model.pkl")
 feature_names = joblib.load("feature_names.pkl")
 
@@ -18,11 +20,11 @@ for col in feature_names:
 
 if st.button("Prediksi"):
     df_input = pd.DataFrame([input_data])
-    df_input = df_input[feature_names]  # urutan sama persis
+    df_input = df_input[feature_names]
 
     prob = model.predict_proba(df_input)[0][1]
 
-    st.write(f"Probabilitas Default: **{prob:.2f}**")
+    st.write(f"**Probabilitas Default:** {prob:.3f}")
 
     if prob >= 0.5:
         st.error("⚠️ Berisiko Default")
