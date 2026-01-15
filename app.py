@@ -28,13 +28,13 @@ st.caption(
 )
 
 # ======================
-# LOAD MODEL & FEATURE
+# LOAD MODEL
 # ======================
-model = joblib.load("xgb_credit_default_model.pkl")
+model = joblib.load("model.pkl")
 feature_names = joblib.load("feature_names.pkl")
 
 # ======================
-# MAPPING AWAM
+# LABEL AWAM
 # ======================
 label_map = {
     "LIMIT_BAL": "Limit Kredit",
@@ -63,7 +63,7 @@ label_map = {
 }
 
 # ======================
-# DEFAULT VALUES
+# SESSION STATE
 # ======================
 if "demo" not in st.session_state:
     st.session_state.demo = "normal"
@@ -74,12 +74,11 @@ if "demo" not in st.session_state:
 col_input, col_output = st.columns([1, 1.2])
 
 # ======================
-# INPUT SECTION
+# INPUT
 # ======================
 with col_input:
     st.subheader("📋 Data Nasabah")
 
-    # -------- DEMO BUTTONS --------
     st.markdown("### 🎯 Contoh Cepat")
     c1, c2 = st.columns(2)
     with c1:
@@ -89,7 +88,6 @@ with col_input:
         if st.button("🔴 Contoh Risiko Tinggi"):
             st.session_state.demo = "high"
 
-    # -------- IDENTITAS --------
     with st.expander("Identitas Dasar", expanded=True):
         sex = st.selectbox("Jenis Kelamin", ["Laki-laki", "Perempuan"])
         education = st.selectbox(
@@ -102,7 +100,6 @@ with col_input:
         )
         age = st.number_input("Usia (tahun)", 18, 100, 30)
 
-    # -------- LIMIT --------
     with st.expander("Limit Kredit", expanded=True):
         if st.session_state.demo == "low":
             limit_bal = 100_000_000
@@ -111,18 +108,21 @@ with col_input:
         else:
             limit_bal = 50_000_000
 
-        limit_bal = st.number_input("Limit Kredit", value=int(limit_bal))
+        limit_bal = st.number_input(
+            "Limit Kredit",
+            value=int(limit_bal),
+            key="limit_bal"
+        )
         st.caption(f"💰 Pratinjau: Rp {limit_bal:,.0f}")
 
-    # -------- RIWAYAT PEMBAYARAN --------
     with st.expander("Riwayat Pembayaran", expanded=True):
         pay_status = st.selectbox(
             "Status Pembayaran Terakhir",
             ["Tepat Waktu", "Terlambat 1 Bulan", "Terlambat >1 Bulan"]
         )
 
-    # -------- NOMINAL LAIN --------
     st.markdown("### Detail Tagihan & Pembayaran")
+
     input_data = {}
 
     for col in feature_names:
@@ -147,12 +147,11 @@ with col_input:
                 "Terlambat >1 Bulan": 2
             }[pay_status]
         else:
-            default_val = 0
             input_data[col] = st.number_input(
-    label_map.get(col, col),
-    value=float(default_val),
-    key=f"input_{col}"
-)
+                label_map.get(col, col),
+                value=0.0,
+                key=f"input_{col}"
+            )
 
 # ======================
 # PREDICTION
@@ -161,7 +160,7 @@ df_input = pd.DataFrame([input_data])[feature_names]
 prob = model.predict_proba(df_input)[0][1]
 
 # ======================
-# OUTPUT SECTION
+# OUTPUT
 # ======================
 with col_output:
     st.subheader("🔍 Hasil Analisis Risiko")
@@ -177,7 +176,7 @@ with col_output:
         st.success("🟢 Risiko Rendah Gagal Bayar")
 
     # ======================
-    # SHAP EXPLANATION
+    # SHAP
     # ======================
     st.subheader("📊 Penjelasan Model (Explainable AI)")
 
@@ -185,14 +184,11 @@ with col_output:
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(df_input)
 
-        explainer = shap.TreeExplainer(model)
-shap_values = explainer.shap_values(df_input)
-
-# HANDLE BINARY / SINGLE OUTPUT
-if isinstance(shap_values, list):
-    shap_single = shap_values[1][0]   # kelas gagal bayar
-else:
-    shap_single = shap_values[0]
+        # FIX SEMUA VERSI SHAP
+        if isinstance(shap_values, list):
+            shap_single = shap_values[1][0]
+        else:
+            shap_single = shap_values[0]
 
         shap_df = pd.DataFrame({
             "Fitur": feature_names,
@@ -216,7 +212,6 @@ else:
 
         st.pyplot(fig)
 
-        # -------- AUTO EXPLANATION --------
         st.subheader("🧠 Penjelasan Otomatis")
         for _, r in risk_up.iterrows():
             st.markdown(f"- **{r['Fitur']}** meningkatkan risiko gagal bayar.")
@@ -230,6 +225,3 @@ st.caption(
     "Catatan: Hasil prediksi bersifat pendukung keputusan "
     "dan tidak menggantikan analisis kredit oleh pihak bank."
 )
-
-
-
