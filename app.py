@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import joblib
 import matplotlib.pyplot as plt
 
@@ -13,14 +12,20 @@ try:
 except:
     SHAP_OK = False
 
-st.set_page_config(page_title="Prediksi Risiko Kredit", layout="wide")
+st.set_page_config(page_title="Prediksi Risiko Kredit", layout="centered")
 st.title("📊 Prediksi Credit Default Menggunakan XGBoost & SHAP")
 
 # ======================
 # LOAD MODEL
 # ======================
-model = joblib.load("xgb_credit_default_model.pkl")
+model = joblib.load("model.pkl")
 feature_names = joblib.load("feature_names.pkl")
+
+# ======================
+# FORMAT RUPIAH
+# ======================
+def rupiah(x):
+    return f"Rp {int(x):,}".replace(",", ".")
 
 # ======================
 # DEMO DATA
@@ -59,78 +64,84 @@ if "input_data" not in st.session_state:
     st.session_state.input_data = LOW_RISK.copy()
 
 # ======================
-# BUTTON DEMO
+# DEMO BUTTON
 # ======================
-c1, c2 = st.columns(2)
-with c1:
-    if st.button("🟢 Contoh Risiko Rendah"):
-        st.session_state.input_data = LOW_RISK.copy()
+st.subheader("🔎 Contoh Cepat")
+if st.button("🟢 Contoh Risiko Rendah"):
+    st.session_state.input_data = LOW_RISK.copy()
 
-with c2:
-    if st.button("🔴 Contoh Risiko Tinggi"):
-        st.session_state.input_data = HIGH_RISK.copy()
+if st.button("🔴 Contoh Risiko Tinggi"):
+    st.session_state.input_data = HIGH_RISK.copy()
 
 # ======================
-# INPUT FORM
+# INPUT DATA
 # ======================
 st.header("1️⃣ Data Nasabah")
 
 input_data = {}
 
-col1, col2 = st.columns(2)
+# LIMIT
+input_data["LIMIT_BAL"] = st.number_input(
+    "Limit Kredit",
+    min_value=0,
+    step=1_000_000,
+    value=int(st.session_state.input_data["LIMIT_BAL"]),
+    key="limit"
+)
+st.caption(f"💰 {rupiah(input_data['LIMIT_BAL'])}")
 
-with col1:
-    input_data["LIMIT_BAL"] = st.number_input(
-        "Limit Kredit (Rp)",
-        min_value=0,
-        value=int(st.session_state.input_data["LIMIT_BAL"]),
-        step=1_000_000,
-        key="limit"
-    )
+# AGE
+input_data["AGE"] = st.number_input(
+    "Usia",
+    min_value=17,
+    max_value=100,
+    value=int(st.session_state.input_data["AGE"]),
+    key="age"
+)
 
-    input_data["AGE"] = st.number_input(
-        "Usia",
-        min_value=17,
-        max_value=100,
-        value=int(st.session_state.input_data["AGE"]),
-        key="age"
-    )
+# SEX
+input_data["SEX"] = st.selectbox(
+    "Jenis Kelamin",
+    options=[1, 2],
+    format_func=lambda x: "Laki-laki" if x == 1 else "Perempuan",
+    index=0 if st.session_state.input_data["SEX"] == 1 else 1,
+    key="sex"
+)
 
-    input_data["SEX"] = st.selectbox(
-        "Jenis Kelamin",
-        options=[1, 2],
-        format_func=lambda x: "Laki-laki" if x == 1 else "Perempuan",
-        index=0 if st.session_state.input_data["SEX"] == 1 else 1
-    )
+# EDUCATION
+input_data["EDUCATION"] = st.selectbox(
+    "Pendidikan Terakhir",
+    options=[1, 2, 3, 4],
+    format_func=lambda x: {
+        1: "Pascasarjana",
+        2: "Sarjana",
+        3: "SMA",
+        4: "Lainnya"
+    }[x],
+    index=st.session_state.input_data["EDUCATION"] - 1,
+    key="edu"
+)
 
-    input_data["EDUCATION"] = st.selectbox(
-        "Pendidikan Terakhir",
-        options=[1, 2, 3, 4],
-        format_func=lambda x: {
-            1: "Pascasarjana",
-            2: "Sarjana",
-            3: "SMA",
-            4: "Lainnya"
-        }[x],
-        index=st.session_state.input_data["EDUCATION"] - 1
-    )
+# MARRIAGE
+input_data["MARRIAGE"] = st.selectbox(
+    "Status Pernikahan",
+    options=[1, 2, 3],
+    format_func=lambda x: {
+        1: "Belum Menikah",
+        2: "Menikah",
+        3: "Lainnya"
+    }[x],
+    index=st.session_state.input_data["MARRIAGE"] - 1,
+    key="mar"
+)
 
-    input_data["MARRIAGE"] = st.selectbox(
-        "Status Pernikahan",
-        options=[1, 2, 3],
-        format_func=lambda x: {
-            1: "Belum Menikah",
-            2: "Menikah",
-            3: "Lainnya"
-        }[x],
-        index=st.session_state.input_data["MARRIAGE"] - 1
-    )
+# ======================
+# PAY STATUS
+# ======================
+st.subheader("Riwayat Keterlambatan Pembayaran")
 
-with col2:
-    st.subheader("Riwayat Keterlambatan Pembayaran")
-
-    pay_labels = {
-    "PAY_0": "Keterlambatan Pembayaran Bulan Terakhir",
+pay_labels = {
+    "PAY_0": "Keterlambatan Bulan Terakhir",
     "PAY_2": "Keterlambatan 2 Bulan Lalu",
     "PAY_3": "Keterlambatan 3 Bulan Lalu",
     "PAY_4": "Keterlambatan 4 Bulan Lalu",
@@ -150,31 +161,34 @@ for p, label in pay_labels.items():
             3: "Terlambat ≥3 bulan"
         }[x],
         index=2 if st.session_state.input_data[p] >= 1 else 1,
-        key=f"pay_{p}"
+        key=p
     )
 
 # ======================
-# TAGIHAN & PEMBAYARAN
+# BILL & PAYMENT
 # ======================
-st.subheader("Tagihan & Pembayaran (6 Bulan Terakhir)")
+st.subheader("Tagihan & Pembayaran 6 Bulan Terakhir")
+
 for i in range(1, 7):
-    c1, c2 = st.columns(2)
-    with c1:
-        input_data[f"BILL_AMT{i}"] = st.number_input(
-            f"Tagihan Bulan ke-{i} (Rp)",
-            min_value=0,
-            value=int(st.session_state.input_data[f"BILL_AMT{i}"]),
-            step=500_000,
-            key=f"bill{i}"
-        )
-    with c2:
-        input_data[f"PAY_AMT{i}"] = st.number_input(
-            f"Pembayaran Bulan ke-{i} (Rp)",
-            min_value=0,
-            value=int(st.session_state.input_data[f"PAY_AMT{i}"]),
-            step=500_000,
-            key=f"pay{i}"
-        )
+    bill = st.number_input(
+        f"Tagihan Bulan ke-{i}",
+        min_value=0,
+        step=500_000,
+        value=int(st.session_state.input_data[f"BILL_AMT{i}"]),
+        key=f"bill{i}"
+    )
+    st.caption(f"📄 {rupiah(bill)}")
+    input_data[f"BILL_AMT{i}"] = bill
+
+    pay = st.number_input(
+        f"Pembayaran Bulan ke-{i}",
+        min_value=0,
+        step=500_000,
+        value=int(st.session_state.input_data[f"PAY_AMT{i}"]),
+        key=f"pay{i}"
+    )
+    st.caption(f"💸 {rupiah(pay)}")
+    input_data[f"PAY_AMT{i}"] = pay
 
 # ======================
 # PREDICTION
@@ -201,10 +215,7 @@ if st.button("🔍 Prediksi Risiko"):
         explainer = shap.TreeExplainer(model)
         shap_values = explainer.shap_values(df_input)
 
-        if isinstance(shap_values, list):
-            shap_single = shap_values[1][0]
-        else:
-            shap_single = shap_values[0]
+        shap_single = shap_values[1][0] if isinstance(shap_values, list) else shap_values[0]
 
         shap_df = pd.DataFrame({
             "Fitur": feature_names,
@@ -223,9 +234,8 @@ if st.button("🔍 Prediksi Risiko"):
 
         st.pyplot(fig)
 
-        st.subheader("🧠 Interpretasi Otomatis")
+        st.subheader("🧠 Penjelasan Otomatis")
         for f in naik["Fitur"]:
             st.markdown(f"- **{f}** meningkatkan risiko gagal bayar.")
         for f in turun["Fitur"]:
             st.markdown(f"- **{f}** menurunkan risiko gagal bayar.")
-
