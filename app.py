@@ -16,7 +16,7 @@ except:
 st.set_page_config(page_title="Prediksi Risiko Kredit", layout="wide")
 st.title("📊 Prediksi Risiko Gagal Bayar Kredit")
 
-model = joblib.load("model.pkl")
+model = joblib.load("xgb_credit_default_model.pkl")
 feature_names = joblib.load("feature_names.pkl")
 
 # ======================
@@ -124,3 +124,4 @@ if SHAP_OK:
         st.markdown(f"- **{f}** meningkatkan risiko gagal bayar.")
     for f in turun["Fitur"]:
         st.markdown(f"- **{f}** menurunkan risiko gagal bayar.")
+
