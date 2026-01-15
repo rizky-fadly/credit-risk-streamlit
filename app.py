@@ -138,7 +138,11 @@ for col in feature_names:
     if col not in input_data:
         label = label_map.get(col, col)
         default_val = demo_data.get(col, 0.0) if use_demo else 0.0
-        input_data[col] = st.number_input(label, value=float(default_val))
+        input_data[col] = st.number_input(
+    label,
+    value=float(default_val),
+    format="%,.0f"
+)
 
 st.caption("Keterlambatan: 0 = tepat waktu, 1 = telat 1 bulan, dst.")
 
@@ -153,9 +157,17 @@ if st.button("Prediksi Risiko"):
 
     prob = model.predict_proba(df_input)[0][1]
 
-    st.metric("Probabilitas Gagal Bayar", f"{prob:.2f}")
+    st.metric(
+    "Probabilitas Gagal Bayar",
+    f"{prob*100:.2f} %"
+)
 
     if prob >= 0.5:
         st.error("⚠️ Risiko Tinggi Gagal Bayar")
     else:
         st.success("✅ Risiko Rendah Gagal Bayar")
+
+st.write(
+    f"**Limit Kredit:** Rp {input_data['LIMIT_BAL']:,.0f}"
+)
+
