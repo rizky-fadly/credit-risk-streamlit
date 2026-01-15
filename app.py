@@ -26,7 +26,7 @@ feature_names = joblib.load("feature_names.pkl")
 # DEMO DATA (1 KLIK)
 # =========================
 demo_data = {
-    "LIMIT_BAL": 50000000,
+    "LIMIT_BAL": 50_000_000,
     "SEX": 1,
     "EDUCATION": 4,
     "MARRIAGE": 2,
@@ -39,19 +39,19 @@ demo_data = {
     "PAY_5": 0,
     "PAY_6": 0,
 
-    "BILL_AMT1": 8000000,
-    "BILL_AMT2": 7500000,
-    "BILL_AMT3": 7000000,
-    "BILL_AMT4": 6800000,
-    "BILL_AMT5": 6500000,
-    "BILL_AMT6": 6000000,
+    "BILL_AMT1": 8_000_000,
+    "BILL_AMT2": 7_500_000,
+    "BILL_AMT3": 7_000_000,
+    "BILL_AMT4": 6_800_000,
+    "BILL_AMT5": 6_500_000,
+    "BILL_AMT6": 6_000_000,
 
-    "PAY_AMT1": 3000000,
-    "PAY_AMT2": 3000000,
-    "PAY_AMT3": 3000000,
-    "PAY_AMT4": 3000000,
-    "PAY_AMT5": 3000000,
-    "PAY_AMT6": 3000000,
+    "PAY_AMT1": 3_000_000,
+    "PAY_AMT2": 3_000_000,
+    "PAY_AMT3": 3_000_000,
+    "PAY_AMT4": 3_000_000,
+    "PAY_AMT5": 3_000_000,
+    "PAY_AMT6": 3_000_000,
 }
 
 if "demo" not in st.session_state:
@@ -85,19 +85,14 @@ marriage_map = {
     "Lainnya": 3
 }
 
-# --- Default demo ---
-sex_default = "Laki-laki" if use_demo else "Laki-laki"
-edu_default = "Sarjana" if use_demo else "Sarjana"
-marriage_default = "Belum Menikah" if use_demo else "Belum Menikah"
-age_default = "30" if use_demo else "30"
-
-sex_label = st.selectbox("Jenis Kelamin", list(sex_map.keys()),
-                          index=list(sex_map.keys()).index(sex_default))
-education_label = st.selectbox("Pendidikan Terakhir", list(edu_map.keys()),
-                               index=list(edu_map.keys()).index(edu_default))
-marriage_label = st.selectbox("Status Pernikahan", list(marriage_map.keys()),
-                              index=list(marriage_map.keys()).index(marriage_default))
-age_value = st.text_input("Usia (tahun)", value=age_default)
+# --- Input kategori ---
+sex_label = st.selectbox("Jenis Kelamin", list(sex_map.keys()))
+education_label = st.selectbox("Pendidikan Terakhir", list(edu_map.keys()))
+marriage_label = st.selectbox("Status Pernikahan", list(marriage_map.keys()))
+age_value = st.text_input(
+    "Usia (tahun)",
+    value=str(demo_data["AGE"]) if use_demo else "30"
+)
 
 input_data["SEX"] = sex_map[sex_label]
 input_data["EDUCATION"] = edu_map[education_label]
@@ -137,12 +132,12 @@ st.subheader("Riwayat Kredit")
 for col in feature_names:
     if col not in input_data:
         label = label_map.get(col, col)
-        default_val = demo_data.get(col, 0.0) if use_demo else 0.0
+        default_val = demo_data.get(col, 0) if use_demo else 0
         input_data[col] = st.number_input(
-    label,
-    value=float(default_val),
-    format="%,.0f"
-)
+            label,
+            value=float(default_val),
+            format="%,.0f"
+        )
 
 st.caption("Keterlambatan: 0 = tepat waktu, 1 = telat 1 bulan, dst.")
 
@@ -158,16 +153,15 @@ if st.button("Prediksi Risiko"):
     prob = model.predict_proba(df_input)[0][1]
 
     st.metric(
-    "Probabilitas Gagal Bayar",
-    f"{prob*100:.2f} %"
-)
+        "Probabilitas Gagal Bayar",
+        f"{prob * 100:.2f} %"
+    )
+
+    st.write(
+        f"**Limit Kredit:** Rp {input_data['LIMIT_BAL']:,.0f}"
+    )
 
     if prob >= 0.5:
         st.error("⚠️ Risiko Tinggi Gagal Bayar")
     else:
         st.success("✅ Risiko Rendah Gagal Bayar")
-
-st.write(
-    f"**Limit Kredit:** Rp {input_data['LIMIT_BAL']:,.0f}"
-)
-
