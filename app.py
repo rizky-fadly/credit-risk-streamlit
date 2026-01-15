@@ -149,6 +149,7 @@ for col in feature_names:
                 step=1
             )
 
+
 st.caption("Keterlambatan: 0 = tepat waktu, 1 = telat 1 bulan, dst.")
 
 # =========================
@@ -175,4 +176,3 @@ if st.button("Prediksi Risiko"):
         st.error("⚠️ Risiko Tinggi Gagal Bayar")
     else:
         st.success("✅ Risiko Rendah Gagal Bayar")
-
