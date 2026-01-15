@@ -30,7 +30,7 @@ st.caption(
 # ======================
 # LOAD MODEL
 # ======================
-model = joblib.load("model.pkl")
+model = joblib.load("xgb_credit_default_model.pkl")
 feature_names = joblib.load("feature_names.pkl")
 
 # ======================
@@ -225,3 +225,4 @@ st.caption(
     "Catatan: Hasil prediksi bersifat pendukung keputusan "
     "dan tidak menggantikan analisis kredit oleh pihak bank."
 )
+
