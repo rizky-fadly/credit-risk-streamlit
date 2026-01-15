@@ -55,12 +55,12 @@ demo_data = {
 }
 
 if "demo" not in st.session_state:
-    st.session_state["demo"] = False
+    st.session_state.demo = False
 
 if st.button("🎯 Isi Contoh Data (Demo)"):
-    st.session_state["demo"] = True
+    st.session_state.demo = True
 
-use_demo = st.session_state["demo"]
+use_demo = st.session_state.demo
 
 # =========================
 # BAGIAN 1: DATA NASABAH
@@ -69,7 +69,7 @@ st.header("📋 Data Nasabah")
 
 input_data = {}
 
-# --- Mapping kategori ---
+# ---- INPUT KATEGORI DASAR ----
 sex_map = {"Laki-laki": 1, "Perempuan": 2}
 edu_map = {
     "Sekolah Dasar": 1,
@@ -85,23 +85,22 @@ marriage_map = {
     "Lainnya": 3
 }
 
-# --- Input kategori ---
 sex_label = st.selectbox("Jenis Kelamin", list(sex_map.keys()))
-education_label = st.selectbox("Pendidikan Terakhir", list(edu_map.keys()))
+edu_label = st.selectbox("Pendidikan Terakhir", list(edu_map.keys()))
 marriage_label = st.selectbox("Status Pernikahan", list(marriage_map.keys()))
-age_value = st.text_input(
+age_val = st.text_input(
     "Usia (tahun)",
     value=str(demo_data["AGE"]) if use_demo else "30"
 )
 
 input_data["SEX"] = sex_map[sex_label]
-input_data["EDUCATION"] = edu_map[education_label]
+input_data["EDUCATION"] = edu_map[edu_label]
 input_data["MARRIAGE"] = marriage_map[marriage_label]
-input_data["AGE"] = int(age_value) if age_value.isdigit() else 30
+input_data["AGE"] = int(age_val) if age_val.isdigit() else 30
 
 st.divider()
 
-# --- Label ramah pengguna ---
+# ---- LABEL RAMAH ----
 label_map = {
     "LIMIT_BAL": "Limit Kredit Kartu (Rp)",
 
@@ -127,28 +126,44 @@ label_map = {
     "PAY_AMT6": "Pembayaran 6 bulan lalu (Rp)",
 }
 
+# =========================
+# RIWAYAT KREDIT
+# =========================
 st.subheader("Riwayat Kredit")
 
+# ---- PAY (dropdown, paling aman) ----
+pay_options = {
+    "Tepat waktu": 0,
+    "Terlambat 1 bulan": 1,
+    "Terlambat 2 bulan": 2,
+    "Terlambat ≥3 bulan": 3
+}
+
+for col in ["PAY_0", "PAY_2", "PAY_3", "PAY_4", "PAY_5", "PAY_6"]:
+    default_val = demo_data.get(col, 0) if use_demo else 0
+    label = label_map[col]
+
+    selected = st.selectbox(
+        label,
+        list(pay_options.keys()),
+        index=list(pay_options.values()).index(min(default_val, 3))
+    )
+    input_data[col] = pay_options[selected]
+
+st.divider()
+
+# ---- NOMINAL UANG ----
 for col in feature_names:
-    if col not in input_data:
+    if col.startswith("BILL_AMT") or col.startswith("PAY_AMT") or col == "LIMIT_BAL":
         label = label_map.get(col, col)
         default_val = demo_data.get(col, 0) if use_demo else 0
 
-        # Jika variabel nominal uang
-        if col.startswith("BILL_AMT") or col.startswith("PAY_AMT") or col == "LIMIT_BAL":
-            input_data[col] = st.number_input(
-                label,
-                value=float(default_val),
-                format="%,.0f"
-            )
-        else:
-            # Variabel status keterlambatan
-            input_data[col] = st.number_input(
-                label,
-                value=int(default_val),
-                step=1
-            )
-
+        input_data[col] = st.number_input(
+            label,
+            value=float(default_val),
+            min_value=0.0,
+            format="%,.0f"
+        )
 
 st.caption("Keterlambatan: 0 = tepat waktu, 1 = telat 1 bulan, dst.")
 
