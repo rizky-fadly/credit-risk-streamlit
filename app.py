@@ -13,7 +13,7 @@ except:
     SHAP_OK = False
 
 st.set_page_config(page_title="Prediksi Risiko Kredit", layout="centered")
-st.title("📊 Prediksi Credit Default Menggunakan XGBoost & SHAP")
+st.title("📊 Prediksi Risiko Gagal Bayar Kredit")
 
 # ======================
 # LOAD MODEL
@@ -141,17 +141,19 @@ pay_labels = {
     "PAY_6": "Keterlambatan 6 Bulan Lalu",
 }
 
+pay_text = {
+    -1: "Tidak ada tagihan",
+    0: "Lancar",
+    1: "Terlambat 1 bulan",
+    2: "Terlambat 2 bulan",
+    3: "Terlambat ≥3 bulan"
+}
+
 for p, label in pay_labels.items():
     input_data[p] = st.selectbox(
         label,
         options=[-1, 0, 1, 2, 3],
-        format_func=lambda x: {
-            -1: "Tidak ada tagihan",
-            0: "Lancar",
-            1: "Terlambat 1 bulan",
-            2: "Terlambat 2 bulan",
-            3: "Terlambat ≥3 bulan"
-        }[x],
+        format_func=lambda x: pay_text[x],
         key=p
     )
 
@@ -165,7 +167,7 @@ for i in range(1, 7):
     pay_key = f"PAY_AMT{i}"
 
     input_data[bill_key] = st.number_input(
-        f"Tagihan Bulan ke-{i}",
+        f"Jumlah Tagihan Bulan ke-{i}",
         min_value=0,
         step=500_000,
         key=bill_key
@@ -173,7 +175,7 @@ for i in range(1, 7):
     st.caption(f"📄 {rupiah(input_data[bill_key])}")
 
     input_data[pay_key] = st.number_input(
-        f"Pembayaran Bulan ke-{i}",
+        f"Jumlah Pembayaran Bulan ke-{i}",
         min_value=0,
         step=500_000,
         key=pay_key
@@ -217,10 +219,10 @@ if st.button("🔍 Prediksi Risiko"):
 
         fig, ax = plt.subplots(1, 2, figsize=(12, 5))
         ax[0].barh(naik["Fitur"], naik["SHAP"])
-        ax[0].set_title("🔴 Faktor Peningkat Risiko")
+        ax[0].set_title("🔴 Faktor yang Meningkatkan Risiko")
 
         ax[1].barh(turun["Fitur"], turun["SHAP"])
-        ax[1].set_title("🟢 Faktor Penurun Risiko")
+        ax[1].set_title("🟢 Faktor yang Menurunkan Risiko")
 
         st.pyplot(fig)
 
@@ -229,16 +231,28 @@ if st.button("🔍 Prediksi Risiko"):
         # ======================
         st.subheader("🧠 Penjelasan Otomatis")
 
-        explanations = {
-            "LIMIT_BAL": lambda v: f"Limit kredit Anda sebesar {rupiah(v)}, yang memengaruhi kapasitas pembayaran.",
-            "AGE": lambda v: f"Usia Anda {int(v)} tahun, yang berhubungan dengan stabilitas finansial.",
-            "PAY_0": lambda v: f"Status pembayaran bulan terakhir adalah: {v} (semakin tinggi, semakin berisiko).",
-            "PAY_2": lambda v: f"Terdapat keterlambatan pembayaran 2 bulan lalu: {v}.",
-            "PAY_3": lambda v: f"Terdapat keterlambatan pembayaran 3 bulan lalu: {v}.",
-            "PAY_4": lambda v: f"Terdapat keterlambatan pembayaran 4 bulan lalu: {v}.",
-            "PAY_5": lambda v: f"Terdapat keterlambatan pembayaran 5 bulan lalu: {v}.",
-            "PAY_6": lambda v: f"Terdapat keterlambatan pembayaran 6 bulan lalu: {v}.",
-        }
+        def explain_feature(feature, value):
+            if feature == "LIMIT_BAL":
+                return f"Limit kredit Anda sebesar {rupiah(value)}, yang memengaruhi kemampuan membayar tagihan."
+            if feature == "AGE":
+                return f"Usia Anda {int(value)} tahun, yang berhubungan dengan stabilitas finansial."
+            if feature.startswith("PAY_"):
+                bulan = {
+                    "PAY_0": "bulan terakhir",
+                    "PAY_2": "2 bulan lalu",
+                    "PAY_3": "3 bulan lalu",
+                    "PAY_4": "4 bulan lalu",
+                    "PAY_5": "5 bulan lalu",
+                    "PAY_6": "6 bulan lalu",
+                }[feature]
+                return f"Status pembayaran {bulan}: {pay_text.get(value, value)}."
+            if feature.startswith("BILL_AMT"):
+                bulan = feature[-1]
+                return f"Jumlah tagihan pada bulan ke-{bulan} adalah {rupiah(value)}."
+            if feature.startswith("PAY_AMT"):
+                bulan = feature[-1]
+                return f"Jumlah pembayaran pada bulan ke-{bulan} adalah {rupiah(value)}."
+            return f"Nilai {feature} adalah {value}."
 
         st.markdown("### 🔴 Faktor yang Meningkatkan Risiko")
         if len(naik) == 0:
@@ -247,10 +261,7 @@ if st.button("🔍 Prediksi Risiko"):
             for _, row in naik.iterrows():
                 f = row["Fitur"]
                 v = input_data.get(f, None)
-                if f in explanations:
-                    st.markdown(f"- {explanations[f](v)}")
-                else:
-                    st.markdown(f"- Nilai **{f} = {v}** berkontribusi menaikkan risiko.")
+                st.markdown(f"- {explain_feature(f, v)}")
 
         st.markdown("### 🟢 Faktor yang Menurunkan Risiko")
         if len(turun) == 0:
@@ -259,7 +270,4 @@ if st.button("🔍 Prediksi Risiko"):
             for _, row in turun.iterrows():
                 f = row["Fitur"]
                 v = input_data.get(f, None)
-                if f in explanations:
-                    st.markdown(f"- {explanations[f](v)}")
-                else:
-                    st.markdown(f"- Nilai **{f} = {v}** membantu menurunkan risiko.")
+                st.markdown(f"- {explain_feature(f, v)}")
