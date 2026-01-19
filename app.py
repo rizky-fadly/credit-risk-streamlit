@@ -18,7 +18,7 @@ st.title("📊 Prediksi Credit Default Menggunakan XGBoost & SHAP")
 # ======================
 # LOAD MODEL
 # ======================
-model = joblib.load("model.pkl")
+model = joblib.load("xgb_credit_default_model.pkl")
 feature_names = joblib.load("feature_names.pkl")
 
 # ======================
@@ -229,3 +229,4 @@ if st.button("🔍 Prediksi Risiko"):
             st.markdown(f"- **{f}** meningkatkan risiko gagal bayar.")
         for f in turun["Fitur"]:
             st.markdown(f"- **{f}** menurunkan risiko gagal bayar.")
+
