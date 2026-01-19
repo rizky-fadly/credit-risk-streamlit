@@ -134,6 +134,7 @@ st.subheader("Riwayat Keterlambatan Pembayaran")
 
 pay_labels = {
     "PAY_0": "Keterlambatan Bulan Terakhir",
+    "PAY_1": "Keterlambatan 1 Bulan Lalu",
     "PAY_2": "Keterlambatan 2 Bulan Lalu",
     "PAY_3": "Keterlambatan 3 Bulan Lalu",
     "PAY_4": "Keterlambatan 4 Bulan Lalu",
@@ -150,12 +151,13 @@ pay_text = {
 }
 
 for p, label in pay_labels.items():
-    input_data[p] = st.selectbox(
-        label,
-        options=[-1, 0, 1, 2, 3],
-        format_func=lambda x: pay_text[x],
-        key=p
-    )
+    if p in feature_names:
+        input_data[p] = st.selectbox(
+            label,
+            options=[-1, 0, 1, 2, 3],
+            format_func=lambda x: pay_text[x],
+            key=p
+        )
 
 # ======================
 # BILL & PAYMENT
@@ -166,21 +168,23 @@ for i in range(1, 7):
     bill_key = f"BILL_AMT{i}"
     pay_key = f"PAY_AMT{i}"
 
-    input_data[bill_key] = st.number_input(
-        f"Jumlah Tagihan Bulan ke-{i}",
-        min_value=0,
-        step=500_000,
-        key=bill_key
-    )
-    st.caption(f"📄 {rupiah(input_data[bill_key])}")
+    if bill_key in feature_names:
+        input_data[bill_key] = st.number_input(
+            f"Jumlah Tagihan Bulan ke-{i}",
+            min_value=0,
+            step=500_000,
+            key=bill_key
+        )
+        st.caption(f"📄 {rupiah(input_data[bill_key])}")
 
-    input_data[pay_key] = st.number_input(
-        f"Jumlah Pembayaran Bulan ke-{i}",
-        min_value=0,
-        step=500_000,
-        key=pay_key
-    )
-    st.caption(f"💸 {rupiah(input_data[pay_key])}")
+    if pay_key in feature_names:
+        input_data[pay_key] = st.number_input(
+            f"Jumlah Pembayaran Bulan ke-{i}",
+            min_value=0,
+            step=500_000,
+            key=pay_key
+        )
+        st.caption(f"💸 {rupiah(input_data[pay_key])}")
 
 # ======================
 # PREDICTION
@@ -231,21 +235,25 @@ if st.button("🔍 Prediksi Risiko"):
         # ======================
         st.subheader("🧠 Penjelasan Otomatis")
 
+        bulan_map = {
+            "PAY_0": "bulan terakhir",
+            "PAY_1": "1 bulan lalu",
+            "PAY_2": "2 bulan lalu",
+            "PAY_3": "3 bulan lalu",
+            "PAY_4": "4 bulan lalu",
+            "PAY_5": "5 bulan lalu",
+            "PAY_6": "6 bulan lalu",
+        }
+
         def explain_feature(feature, value):
             if feature == "LIMIT_BAL":
                 return f"Limit kredit Anda sebesar {rupiah(value)}, yang memengaruhi kemampuan membayar tagihan."
             if feature == "AGE":
                 return f"Usia Anda {int(value)} tahun, yang berhubungan dengan stabilitas finansial."
             if feature.startswith("PAY_"):
-                bulan = {
-                    "PAY_0": "bulan terakhir",
-                    "PAY_2": "2 bulan lalu",
-                    "PAY_3": "3 bulan lalu",
-                    "PAY_4": "4 bulan lalu",
-                    "PAY_5": "5 bulan lalu",
-                    "PAY_6": "6 bulan lalu",
-                }[feature]
-                return f"Status pembayaran {bulan}: {pay_text.get(value, value)}."
+                bulan = bulan_map.get(feature, "beberapa bulan lalu")
+                status = pay_text.get(value, value)
+                return f"Status pembayaran {bulan}: {status}."
             if feature.startswith("BILL_AMT"):
                 bulan = feature[-1]
                 return f"Jumlah tagihan pada bulan ke-{bulan} adalah {rupiah(value)}."
