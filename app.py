@@ -18,7 +18,7 @@ st.title("📊 Prediksi Credit Default Menggunakan XGBoost & SHAP")
 # ======================
 # LOAD MODEL
 # ======================
-model = joblib.load("xgb_credit_default_model.pkl")
+model = joblib.load("model.pkl")
 feature_names = joblib.load("feature_names.pkl")
 
 # ======================
@@ -58,20 +58,22 @@ for i in range(1, 7):
     HIGH_RISK[f"PAY_AMT{i}"] = 500_000
 
 # ======================
-# SESSION STATE
+# DEMO LOADER (CRITICAL FIX)
 # ======================
-if "input_data" not in st.session_state:
-    st.session_state.input_data = LOW_RISK.copy()
+def load_demo(demo):
+    for k, v in demo.items():
+        st.session_state[k] = v
 
 # ======================
 # DEMO BUTTON
 # ======================
 st.subheader("🔎 Contoh Cepat")
+
 if st.button("🟢 Contoh Risiko Rendah"):
-    st.session_state.input_data = LOW_RISK.copy()
+    load_demo(LOW_RISK)
 
 if st.button("🔴 Contoh Risiko Tinggi"):
-    st.session_state.input_data = HIGH_RISK.copy()
+    load_demo(HIGH_RISK)
 
 # ======================
 # INPUT DATA
@@ -80,35 +82,28 @@ st.header("1️⃣ Data Nasabah")
 
 input_data = {}
 
-# LIMIT
 input_data["LIMIT_BAL"] = st.number_input(
     "Limit Kredit",
     min_value=0,
     step=1_000_000,
-    value=int(st.session_state.input_data["LIMIT_BAL"]),
-    key="limit"
+    key="LIMIT_BAL"
 )
 st.caption(f"💰 {rupiah(input_data['LIMIT_BAL'])}")
 
-# AGE
 input_data["AGE"] = st.number_input(
     "Usia",
     min_value=17,
     max_value=100,
-    value=int(st.session_state.input_data["AGE"]),
-    key="age"
+    key="AGE"
 )
 
-# SEX
 input_data["SEX"] = st.selectbox(
     "Jenis Kelamin",
     options=[1, 2],
     format_func=lambda x: "Laki-laki" if x == 1 else "Perempuan",
-    index=0 if st.session_state.input_data["SEX"] == 1 else 1,
-    key="sex"
+    key="SEX"
 )
 
-# EDUCATION
 input_data["EDUCATION"] = st.selectbox(
     "Pendidikan Terakhir",
     options=[1, 2, 3, 4],
@@ -118,11 +113,9 @@ input_data["EDUCATION"] = st.selectbox(
         3: "SMA",
         4: "Lainnya"
     }[x],
-    index=st.session_state.input_data["EDUCATION"] - 1,
-    key="edu"
+    key="EDUCATION"
 )
 
-# MARRIAGE
 input_data["MARRIAGE"] = st.selectbox(
     "Status Pernikahan",
     options=[1, 2, 3],
@@ -131,8 +124,7 @@ input_data["MARRIAGE"] = st.selectbox(
         2: "Menikah",
         3: "Lainnya"
     }[x],
-    index=st.session_state.input_data["MARRIAGE"] - 1,
-    key="mar"
+    key="MARRIAGE"
 )
 
 # ======================
@@ -160,7 +152,6 @@ for p, label in pay_labels.items():
             2: "Terlambat 2 bulan",
             3: "Terlambat ≥3 bulan"
         }[x],
-        index=2 if st.session_state.input_data[p] >= 1 else 1,
         key=p
     )
 
@@ -170,25 +161,24 @@ for p, label in pay_labels.items():
 st.subheader("Tagihan & Pembayaran 6 Bulan Terakhir")
 
 for i in range(1, 7):
-    bill = st.number_input(
+    bill_key = f"BILL_AMT{i}"
+    pay_key = f"PAY_AMT{i}"
+
+    input_data[bill_key] = st.number_input(
         f"Tagihan Bulan ke-{i}",
         min_value=0,
         step=500_000,
-        value=int(st.session_state.input_data[f"BILL_AMT{i}"]),
-        key=f"bill{i}"
+        key=bill_key
     )
-    st.caption(f"📄 {rupiah(bill)}")
-    input_data[f"BILL_AMT{i}"] = bill
+    st.caption(f"📄 {rupiah(input_data[bill_key])}")
 
-    pay = st.number_input(
+    input_data[pay_key] = st.number_input(
         f"Pembayaran Bulan ke-{i}",
         min_value=0,
         step=500_000,
-        value=int(st.session_state.input_data[f"PAY_AMT{i}"]),
-        key=f"pay{i}"
+        key=pay_key
     )
-    st.caption(f"💸 {rupiah(pay)}")
-    input_data[f"PAY_AMT{i}"] = pay
+    st.caption(f"💸 {rupiah(input_data[pay_key])}")
 
 # ======================
 # PREDICTION
@@ -239,4 +229,3 @@ if st.button("🔍 Prediksi Risiko"):
             st.markdown(f"- **{f}** meningkatkan risiko gagal bayar.")
         for f in turun["Fitur"]:
             st.markdown(f"- **{f}** menurunkan risiko gagal bayar.")
-
