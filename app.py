@@ -58,7 +58,7 @@ for i in range(1, 7):
     HIGH_RISK[f"PAY_AMT{i}"] = 500_000
 
 # ======================
-# DEMO LOADER (CRITICAL FIX)
+# DEMO LOADER
 # ======================
 def load_demo(demo):
     for k, v in demo.items():
@@ -224,9 +224,42 @@ if st.button("🔍 Prediksi Risiko"):
 
         st.pyplot(fig)
 
+        # ======================
+        # PENJELASAN OTOMATIS (HUMAN FRIENDLY)
+        # ======================
         st.subheader("🧠 Penjelasan Otomatis")
-        for f in naik["Fitur"]:
-            st.markdown(f"- **{f}** meningkatkan risiko gagal bayar.")
-        for f in turun["Fitur"]:
-            st.markdown(f"- **{f}** menurunkan risiko gagal bayar.")
 
+        explanations = {
+            "LIMIT_BAL": lambda v: f"Limit kredit Anda sebesar {rupiah(v)}, yang memengaruhi kapasitas pembayaran.",
+            "AGE": lambda v: f"Usia Anda {int(v)} tahun, yang berhubungan dengan stabilitas finansial.",
+            "PAY_0": lambda v: f"Status pembayaran bulan terakhir adalah: {v} (semakin tinggi, semakin berisiko).",
+            "PAY_2": lambda v: f"Terdapat keterlambatan pembayaran 2 bulan lalu: {v}.",
+            "PAY_3": lambda v: f"Terdapat keterlambatan pembayaran 3 bulan lalu: {v}.",
+            "PAY_4": lambda v: f"Terdapat keterlambatan pembayaran 4 bulan lalu: {v}.",
+            "PAY_5": lambda v: f"Terdapat keterlambatan pembayaran 5 bulan lalu: {v}.",
+            "PAY_6": lambda v: f"Terdapat keterlambatan pembayaran 6 bulan lalu: {v}.",
+        }
+
+        st.markdown("### 🔴 Faktor yang Meningkatkan Risiko")
+        if len(naik) == 0:
+            st.write("Tidak ada faktor dominan yang meningkatkan risiko secara signifikan.")
+        else:
+            for _, row in naik.iterrows():
+                f = row["Fitur"]
+                v = input_data.get(f, None)
+                if f in explanations:
+                    st.markdown(f"- {explanations[f](v)}")
+                else:
+                    st.markdown(f"- Nilai **{f} = {v}** berkontribusi menaikkan risiko.")
+
+        st.markdown("### 🟢 Faktor yang Menurunkan Risiko")
+        if len(turun) == 0:
+            st.write("Tidak ada faktor dominan yang menurunkan risiko secara signifikan.")
+        else:
+            for _, row in turun.iterrows():
+                f = row["Fitur"]
+                v = input_data.get(f, None)
+                if f in explanations:
+                    st.markdown(f"- {explanations[f](v)}")
+                else:
+                    st.markdown(f"- Nilai **{f} = {v}** membantu menurunkan risiko.")
